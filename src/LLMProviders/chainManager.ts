@@ -7,12 +7,7 @@ import {
   subscribeToModelKeyChange,
 } from "@/aiParams";
 import ChainFactory, { ChainType, Document } from "@/chainFactory";
-import {
-  AI_SENDER,
-  BUILTIN_CHAT_MODELS,
-  USER_SENDER,
-  VAULT_VECTOR_STORE_STRATEGY,
-} from "@/constants";
+import { BUILTIN_CHAT_MODELS, USER_SENDER, VAULT_VECTOR_STORE_STRATEGY } from "@/constants";
 import {
   ChainRunner,
   CopilotPlusChainRunner,
@@ -109,14 +104,14 @@ export default class ChainManager {
    * name.
    */
   createChainWithNewModel(): void {
-    let newModelKey = getModelKey();
+    let newModelKey = getSettings().defaultModelKey;
     try {
       let customModel = findCustomModel(newModelKey, getSettings().activeModels);
       if (!customModel) {
         // Reset default model if no model is found
         console.error("Resetting default model. No model configuration found for: ", newModelKey);
         customModel = BUILTIN_CHAT_MODELS[0];
-        newModelKey = customModel.name + "|" + customModel.provider;
+        newModelKey = getModelKey(customModel.name, customModel.provider);
       }
       this.chatModelManager.setChatModel(customModel);
       // Must update the chatModel for chain because ChainFactory always
@@ -251,34 +246,22 @@ export default class ChainManager {
       debug?: boolean;
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
+      isO1Model?: boolean; // Correctly defined in options
     } = {}
   ) {
-    const { debug = false, ignoreSystemMessage = false } = options;
+    const { debug = false, ignoreSystemMessage = false, isO1Model = false } = options; // Destructure isO1Model from options
 
     if (debug) console.log("==== Step 0: Initial user message ====\n", userMessage);
 
     this.validateChatModel();
     this.validateChainInitialization();
 
-    const chatModel = this.chatModelManager.getChatModel();
-    const modelName = (chatModel as any).modelName || (chatModel as any).model || "";
-    const isO1Model = modelName.startsWith("o1");
-
     // Handle ignoreSystemMessage
     if (ignoreSystemMessage || isO1Model) {
-      let effectivePrompt = ChatPromptTemplate.fromMessages([
+      const effectivePrompt = ChatPromptTemplate.fromMessages([
         new MessagesPlaceholder("history"),
         HumanMessagePromptTemplate.fromTemplate("{input}"),
       ]);
-
-      // TODO: hack for o1 models, to be removed when they support system prompt
-      if (isO1Model) {
-        //  Temporary fix：for o1-xx model need to covert systemMessage to aiMessage
-        effectivePrompt = ChatPromptTemplate.fromMessages([
-          [AI_SENDER, getSystemPrompt() || ""],
-          effectivePrompt,
-        ]);
-      }
 
       this.setChain(getChainType(), {
         prompt: effectivePrompt,
@@ -286,6 +269,7 @@ export default class ChainManager {
     }
 
     const chainRunner = this.getChainRunner();
+    // Pass isO1Model within options directly to chainRunner
     return await chainRunner.run(
       userMessage,
       abortController,

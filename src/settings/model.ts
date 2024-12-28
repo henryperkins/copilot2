@@ -140,7 +140,7 @@ export function sanitizeSettings(settings: CopilotSettings): CopilotSettings {
 }
 
 export function getSystemPrompt(): string {
-  const userPrompt = getSettings().userSystemPrompt;
+  const userPrompt = getSettings().userSystemPrompt.trimStart();
   return userPrompt ? `${DEFAULT_SYSTEM_PROMPT}\n\n${userPrompt}` : DEFAULT_SYSTEM_PROMPT;
 }
 
@@ -163,11 +163,9 @@ function mergeActiveModels(
   const getModelKey = (model: CustomModel) => `${model.name}|${model.provider}`;
 
   // Add core models to the map
-  builtInModels
-    .filter((model) => model.core)
-    .forEach((model) => {
-      modelMap.set(getModelKey(model), { ...model, core: true });
-    });
+  builtInModels.forEach((model) => {
+    modelMap.set(getModelKey(model), { ...model });
+  });
 
   // Add or update existing models in the map
   existingActiveModels.forEach((model) => {
@@ -176,7 +174,8 @@ function mergeActiveModels(
     if (existingModel) {
       // If it's a built-in model, preserve the built-in status
       modelMap.set(key, {
-        ...model,
+        ...existingModel, // Preserve existing properties
+        ...model, // Overwrite with user settings
         isBuiltIn: existingModel.isBuiltIn || model.isBuiltIn,
       });
     } else {

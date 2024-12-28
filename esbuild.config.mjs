@@ -33,6 +33,7 @@ const context = await esbuild.context({
     "@lezer/lr",
   ],
   format: "cjs",
+  platform: "node",
   target: "es2020",
   logLevel: "info",
   sourcemap: prod ? false : "inline",
@@ -40,8 +41,12 @@ const context = await esbuild.context({
   outfile: "main.js",
   plugins: [svgPlugin(), wasmPlugin],
   define: {
+    "process.env.NODE_ENV": prod ? '"production"' : '"development"',
     global: "window",
+    React: "window.React",
   },
+  jsx: "automatic",
+  jsxFragment: "React.Fragment",
 });
 
 if (prod) {

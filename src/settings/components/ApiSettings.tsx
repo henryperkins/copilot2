@@ -2,8 +2,13 @@ import { updateSetting, useSettingsValue } from "@/settings/model";
 import React from "react";
 import ApiSetting from "./ApiSetting";
 import Collapsible from "./Collapsible";
+import { App } from "obsidian";
 
-const ApiSettings: React.FC = () => {
+interface ApiSettingsProps {
+  app: App;
+}
+
+const ApiSettings: React.FC<ApiSettingsProps> = ({ app }) => {
   const settings = useSettingsValue();
   return (
     <div>

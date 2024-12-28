@@ -22,6 +22,7 @@ export interface ChainRunner {
       debug?: boolean;
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
+      isO1Model?: boolean; // isO1Model added to the interface
     }
   ): Promise<string>;
 }
@@ -38,6 +39,7 @@ abstract class BaseChainRunner implements ChainRunner {
       debug?: boolean;
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
+      isO1Model?: boolean;
     }
   ): Promise<string>;
 
@@ -110,6 +112,56 @@ abstract class BaseChainRunner implements ChainRunner {
       console.error(errorData);
     }
   }
+
+  protected async handleNonStreamingResponse(
+    chain: any, // You might want to use a more specific type here if possible
+    userMessage: ChatMessage,
+    abortController: AbortController,
+    addMessage: (message: ChatMessage) => void,
+    updateCurrentAiMessage: (message: string) => void,
+    debug: boolean,
+    sources?: { title: string; score: number }[]
+  ) {
+    let fullAIResponse = "";
+    try {
+      // Load memory variables and format chat history
+      const memory = this.chainManager.memoryManager.getMemory();
+      const memoryVariables = await memory.loadMemoryVariables({});
+      const chatHistory = extractChatHistory(memoryVariables);
+      const formattedChatHistory = chatHistory
+        .map(([human, ai]) => `Human: ${human}\nAssistant: ${ai}`)
+        .join("\n");
+
+      // Construct the full prompt with context
+      const prompt = (
+        await this.chainManager.promptManager.getQAPrompt({
+          question: userMessage.message,
+          context: formattedChatHistory,
+          systemMessage: "",
+        })
+      ).toString();
+
+      // Invoke the chain with the constructed prompt
+      const response = await chain.invoke({
+        input: prompt,
+      } as any);
+
+      fullAIResponse = response.content;
+      updateCurrentAiMessage(fullAIResponse);
+    } catch (error) {
+      await this.handleError(error, debug, addMessage, updateCurrentAiMessage);
+    }
+
+    return await this.handleResponse(
+      fullAIResponse,
+      userMessage,
+      abortController,
+      addMessage,
+      updateCurrentAiMessage,
+      debug,
+      sources
+    );
+  }
 }
 
 class LLMChainRunner extends BaseChainRunner {
@@ -122,9 +174,22 @@ class LLMChainRunner extends BaseChainRunner {
       debug?: boolean;
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
+      isO1Model?: boolean;
     }
   ): Promise<string> {
-    const { debug = false } = options;
+    const { debug = false, isO1Model = false } = options;
+
+    if (isO1Model) {
+      return this.handleNonStreamingResponse(
+        ChainManager.getChain(),
+        userMessage,
+        abortController,
+        addMessage,
+        updateCurrentAiMessage,
+        debug
+      );
+    }
+
     let fullAIResponse = "";
 
     try {
@@ -163,9 +228,22 @@ class VaultQAChainRunner extends BaseChainRunner {
       debug?: boolean;
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
+      isO1Model?: boolean;
     }
   ): Promise<string> {
-    const { debug = false } = options;
+    const { debug = false, isO1Model = false } = options;
+
+    if (isO1Model) {
+      return this.handleNonStreamingResponse(
+        ChainManager.getRetrievalChain(),
+        userMessage,
+        abortController,
+        addMessage,
+        updateCurrentAiMessage,
+        debug
+      );
+    }
+
     let fullAIResponse = "";
 
     try {
@@ -234,12 +312,8 @@ class CopilotPlusChainRunner extends BaseChainRunner {
     const hasYoutubeCommand = trimmedMessage.includes("@youtube");
     const youtubeUrl = extractYoutubeUrl(trimmedMessage);
 
-    // Check if message only contains @youtube command and a valid URL
-    const words = trimmedMessage
-      .split(/\s+/)
-      .filter((word) => word !== "@youtube" && word.length > 0);
-
-    return hasYoutubeCommand && youtubeUrl !== null && words.length === 1;
+    // Check if message contains @youtube command and a valid URL
+    return hasYoutubeCommand && youtubeUrl !== null;
   }
 
   private async streamMultimodalResponse(
@@ -329,11 +403,23 @@ class CopilotPlusChainRunner extends BaseChainRunner {
       ignoreSystemMessage?: boolean;
       updateLoading?: (loading: boolean) => void;
       updateLoadingMessage?: (message: string) => void;
+      isO1Model?: boolean;
     }
   ): Promise<string> {
-    const { debug = false, updateLoadingMessage } = options;
+    const { debug = false, updateLoadingMessage, isO1Model = false } = options;
     let fullAIResponse = "";
     let sources: { title: string; score: number }[] = [];
+
+    if (isO1Model) {
+      return this.handleNonStreamingResponse(
+        ChainManager.getChain(),
+        userMessage,
+        abortController,
+        addMessage,
+        updateCurrentAiMessage,
+        debug
+      );
+    }
 
     try {
       // Check if this is a YouTube-only message

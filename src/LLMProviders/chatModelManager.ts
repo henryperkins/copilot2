@@ -1,4 +1,5 @@
-import { CustomModel, getModelKey, ModelConfig, setModelKey } from "@/aiParams";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { CustomModel, ModelConfig, setModelKey } from "@/aiParams";
 import { BUILTIN_CHAT_MODELS, ChatModelProviders } from "@/constants";
 import { getDecryptedKey } from "@/encryptionService";
 import { getSettings, subscribeToSettingsChange } from "@/settings/model";
@@ -78,7 +79,7 @@ export default class ChatModelManager {
     const isO1Model = modelName.startsWith("o1");
     const baseConfig: ModelConfig = {
       modelName: modelName,
-      temperature: settings.temperature,
+      temperature: isO1Model ? 1 : settings.temperature, // Set temperature to 1 for o1 models
       streaming: true,
       maxRetries: 3,
       maxConcurrency: 3,
@@ -295,7 +296,7 @@ export default class ChatModelManager {
   private validateCurrentModel(): void {
     if (!ChatModelManager.chatModel) return;
 
-    const currentModelKey = getModelKey();
+    const currentModelKey = getSettings().defaultModelKey;
     if (!currentModelKey) return;
 
     // Get the model configuration

@@ -3,7 +3,7 @@ import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 import { atom, useAtom } from "jotai";
-import { settingsAtom, settingsStore } from "@/settings/model";
+import { settingsAtom, settingsStore, updateSetting } from "@/settings/model";
 
 const userModelKeyAtom = atom<string | null>(null);
 const modelKeyAtom = atom(
@@ -40,6 +40,7 @@ export interface ModelConfig {
   maxRetries: number;
   maxConcurrency: number;
   maxTokens?: number;
+  maxCompletionTokens?: number; // Add this for o1 models
   openAIApiKey?: string;
   openAIOrgId?: string;
   anthropicApiKey?: string;
@@ -75,12 +76,13 @@ export interface CustomModel {
   core?: boolean;
 }
 
+// Changed these to normal functions
 export function setModelKey(modelKey: string) {
-  settingsStore.set(modelKeyAtom, modelKey);
+  updateSetting("defaultModelKey", modelKey);
 }
 
-export function getModelKey(): string {
-  return settingsStore.get(modelKeyAtom);
+export function getModelKey(modelName: string, provider: string): string {
+  return `${modelName}|${provider}`;
 }
 
 export function subscribeToModelKeyChange(callback: () => void): () => void {

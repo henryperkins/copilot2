@@ -1,4 +1,4 @@
-import { CustomModel, useChainType, useModelKey } from "@/aiParams";
+import { useChainType, getModelKey, setModelKey } from "@/aiParams";
 import { ChainType } from "@/chainFactory";
 import { AddImageModal } from "@/components/modals/AddImageModal";
 import { ListPromptModal } from "@/components/modals/ListPromptModal";
@@ -8,12 +8,11 @@ import { CustomPromptProcessor } from "@/customPromptProcessor";
 import { COPILOT_TOOL_NAMES } from "@/LLMProviders/intentAnalyzer";
 import { Mention } from "@/mentions/Mention";
 import { useSettingsValue } from "@/settings/model";
-import { ChatMessage } from "@/sharedState";
 import { getToolDescription } from "@/tools/toolManager";
 import { extractNoteTitles } from "@/utils";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ArrowBigUp, ChevronUp, Command, CornerDownLeft, Image, StopCircle } from "lucide-react";
-import { App, Platform, TFile } from "obsidian";
+import { App, Notice, Platform, TFile } from "obsidian";
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import ChatControls from "./ChatControls";
 import { TooltipActionButton } from "./TooltipActionButton";
@@ -32,15 +31,13 @@ interface ChatInputProps {
   contextNotes: TFile[];
   setContextNotes: React.Dispatch<React.SetStateAction<TFile[]>>;
   includeActiveNote: boolean;
-  setIncludeActiveNote: (include: boolean) => void;
+  setIncludeActiveNote: React.Dispatch<React.SetStateAction<boolean>>;
   mention: Mention;
   selectedImages: File[];
   onAddImage: (files: File[]) => void;
   setSelectedImages: React.Dispatch<React.SetStateAction<File[]>>;
   chatHistory: ChatMessage[];
 }
-
-const getModelKey = (model: CustomModel) => `${model.name}|${model.provider}`;
 
 const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
   (
@@ -73,7 +70,6 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
     const [contextUrls, setContextUrls] = useState<string[]>([]);
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [currentModelKey, setCurrentModelKey] = useModelKey();
     const [currentChain] = useChainType();
     const [currentActiveNote, setCurrentActiveNote] = useState<TFile | null>(
       app.workspace.getActiveFile()
@@ -156,7 +152,7 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
       // Handle other input triggers
       if (cursorPos >= 2 && inputValue.slice(cursorPos - 2, cursorPos) === "[[") {
         showNoteTitleModal(cursorPos);
-      } else if (inputValue === "/") {
+      } else if (inputValue === "/" && !currentModelKey.startsWith("o1-preview")) {
         showCustomPromptModal();
       } else if (inputValue.slice(-1) === "@" && currentChain === ChainType.COPILOT_PLUS_CHAIN) {
         showCopilotPlusOptionsModal();
@@ -268,6 +264,13 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
         }
         setHistoryIndex(-1);
         setTempInput("");
+        return;
+      }
+
+      // Prevent custom prompt modal from showing when o1-preview is selected
+      if (currentModelKey.startsWith("o1-preview") && e.key === "/") {
+        e.preventDefault();
+        new Notice("Custom prompts are not supported for the o1-preview model.");
         return;
       }
 
@@ -435,8 +438,10 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
           ref={textAreaRef}
           className="chat-input-textarea"
           placeholder={
-            "Ask anything. [[ for notes. / for custom prompts. " +
-            (currentChain === ChainType.COPILOT_PLUS_CHAIN ? "@ for tools." : "")
+            currentModelKey && currentModelKey.startsWith("o1-preview")
+              ? "Ask anything (Note: @ commands and custom prompts are not supported for this model)"
+              : "Ask anything. [[ for notes. / for custom prompts. " +
+                (currentChain === ChainType.COPILOT_PLUS_CHAIN ? "@ for tools." : "")
           }
           value={inputMessage}
           onChange={handleInputChange}
@@ -447,19 +452,20 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
           <div className="chat-input-left">
             <DropdownMenu.Root open={isModelDropdownOpen} onOpenChange={setIsModelDropdownOpen}>
               <DropdownMenu.Trigger className="model-select-button">
-                {settings.activeModels.find((model) => getModelKey(model) === currentModelKey)
-                  ?.name || "Select Model"}
+                {settings.activeModels.find(
+                  (model) => getModelKey(model.name, model.provider) === currentModelKey
+                )?.name || "Select Model"}
                 <ChevronUp size={10} />
               </DropdownMenu.Trigger>
 
               <DropdownMenu.Portal container={activeDocument.body}>
-                <DropdownMenu.Content className="model-select-content" align="start">
+                <DropdownMenu.Content className="model-select-content" align="start" sideOffset={5}>
                   {settings.activeModels
                     .filter((model) => model.enabled)
                     .map((model) => (
                       <DropdownMenu.Item
-                        key={getModelKey(model)}
-                        onSelect={() => setCurrentModelKey(getModelKey(model))}
+                        key={getModelKey(model.name, model.provider)}
+                        onSelect={() => setModelKey(getModelKey(model.name, model.provider))}
                       >
                         {model.name}
                       </DropdownMenu.Item>
@@ -471,7 +477,11 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
             {currentChain === ChainType.COPILOT_PLUS_CHAIN && (
               <TooltipActionButton
                 onClick={() => {
-                  new AddImageModal(app, onAddImage).open();
+                  if (!currentModelKey.startsWith("o1-preview")) {
+                    new AddImageModal(app, onAddImage).open();
+                  } else {
+                    new Notice("Image uploads are not supported for the o1-preview model.");
+                  }
                 }}
                 Icon={
                   <div className="button-content">
@@ -479,6 +489,7 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
                     <Image className="icon-scaler" />
                   </div>
                 }
+                disabled={currentModelKey.startsWith("o1-preview")}
               >
                 Add Image
               </TooltipActionButton>
@@ -496,7 +507,7 @@ const ChatInput = forwardRef<{ focus: () => void }, ChatInputProps>(
               <span>chat</span>
             </button>
 
-            {currentChain === "copilot_plus" && (
+            {currentChain === ChainType.COPILOT_PLUS_CHAIN && (
               <button onClick={() => handleSendMessage(["@vault"])} className="submit-button vault">
                 <div className="button-content">
                   {Platform.isMacOS ? (

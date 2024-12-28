@@ -1,8 +1,13 @@
 import React from "react";
 import ApiSetting from "./ApiSetting";
 import { updateSetting, useSettingsValue } from "@/settings/model";
+import { App } from "obsidian";
 
-const CopilotPlusSettings: React.FC = () => {
+interface CopilotPlusSettingsProps {
+  app: App;
+}
+
+const CopilotPlusSettings: React.FC<CopilotPlusSettingsProps> = ({ app }) => {
   const settings = useSettingsValue();
 
   return (

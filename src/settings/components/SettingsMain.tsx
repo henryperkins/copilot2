@@ -19,16 +19,18 @@ const SettingsMain: React.FC<SettingsMainProps> = ({ plugin }) => {
         <div>
           Copilot Settings <small>v{plugin.manifest.version}</small>
         </div>
-        <button onClick={() => new ResetSettingsConfirmModal(app, () => resetSettings()).open()}>
+        <button
+          onClick={() => new ResetSettingsConfirmModal(plugin.app, () => resetSettings()).open()}
+        >
           Reset to Default Settings
         </button>
       </h1>
 
-      <CopilotPlusSettings />
-      <GeneralSettings />
-      <ApiSettings />
-      <QASettings vectorStoreManager={plugin.vectorStoreManager} />
-      <AdvancedSettings />
+      <CopilotPlusSettings app={plugin.app} />
+      <GeneralSettings app={plugin.app} />
+      <ApiSettings app={plugin.app} />
+      <QASettings app={plugin.app} vectorStoreManager={plugin.vectorStoreManager} />
+      <AdvancedSettings app={plugin.app} />
     </div>
   );
 };

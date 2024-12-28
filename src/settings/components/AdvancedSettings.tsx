@@ -1,8 +1,12 @@
 import { updateSetting, useSettingsValue } from "@/settings/model";
 import React from "react";
 import { TextAreaComponent } from "./SettingBlocks";
+import { App } from "obsidian";
 
-const AdvancedSettings: React.FC = () => {
+interface AdvancedSettingsProps {
+  app: App;
+}
+const AdvancedSettings: React.FC<AdvancedSettingsProps> = ({ app }) => {
   const settings = useSettingsValue();
   return (
     <div>

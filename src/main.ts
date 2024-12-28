@@ -536,10 +536,16 @@ export default class CopilotPlugin extends Plugin {
     const leaves = this.app.workspace.getLeavesOfType(CHAT_VIEWTYPE);
     if (leaves.length === 0) {
       if (getSettings().defaultOpenArea === DEFAULT_OPEN_AREA.VIEW) {
-        await this.app.workspace.getRightLeaf(false).setViewState({
-          type: CHAT_VIEWTYPE,
-          active: true,
-        });
+        const rightLeaf = this.app.workspace.getRightLeaf(false);
+        if (rightLeaf) {
+          await rightLeaf.setViewState({
+            type: CHAT_VIEWTYPE,
+            active: true,
+          });
+        } else {
+          console.error("Failed to get right leaf for Copilot view");
+          return;
+        }
       } else {
         await this.app.workspace.getLeaf(true).setViewState({
           type: CHAT_VIEWTYPE,

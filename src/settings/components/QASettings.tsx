@@ -11,12 +11,14 @@ import {
   TextAreaComponent,
   ToggleComponent,
 } from "./SettingBlocks";
+import { App } from "obsidian";
 
 interface QASettingsProps {
+  app: App;
   vectorStoreManager: VectorStoreManager;
 }
 
-const QASettings: React.FC<QASettingsProps> = ({ vectorStoreManager }) => {
+const QASettings: React.FC<QASettingsProps> = ({ app, vectorStoreManager }) => {
   const settings = useSettingsValue();
 
   const handleUpdateEmbeddingModels = (models: Array<CustomModel>) => {

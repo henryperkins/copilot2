@@ -10,8 +10,14 @@ import {
   TextComponent,
   ToggleComponent,
 } from "./SettingBlocks";
+import { BUILTIN_CHAT_MODELS, ChatModels } from "@/constants";
+import { App } from "obsidian";
 
-const GeneralSettings: React.FC = () => {
+interface GeneralSettingsProps {
+  app: App;
+}
+
+const GeneralSettings: React.FC<GeneralSettingsProps> = ({ app }) => {
   const settings = useSettingsValue();
 
   const handleUpdateModels = (models: Array<CustomModel>) => {
@@ -20,6 +26,23 @@ const GeneralSettings: React.FC = () => {
       baseUrl: model.baseUrl || "",
       apiKey: model.apiKey || "",
     }));
+
+    const o1PreviewModel = BUILTIN_CHAT_MODELS.find(
+      (model) => model.name === ChatModels.o1_preview
+    );
+
+    if (o1PreviewModel) {
+      const existingO1Preview = updatedActiveModels.find(
+        (model) => model.name === ChatModels.o1_preview
+      );
+      if (!existingO1Preview) {
+        updatedActiveModels.push({ ...o1PreviewModel, enabled: false, baseUrl: "", apiKey: "" });
+      } else {
+        // Ensure the o1-preview model is always disabled by default
+        existingO1Preview.enabled = false;
+      }
+    }
+
     updateSetting("activeModels", updatedActiveModels);
   };
 
@@ -84,14 +107,14 @@ const GeneralSettings: React.FC = () => {
         description="The default folder name where chat conversations will be saved. Default is 'copilot-conversations'"
         placeholder="copilot-conversations"
         value={settings.defaultSaveFolder}
-        onChange={(value) => updateSetting("defaultSaveFolder", value)}
+        onChange={(e) => updateSetting("defaultSaveFolder", e.target.value)}
       />
       <TextComponent
         name="Default Conversation Tag"
         description="The default tag to be used when saving a conversation. Default is 'ai-conversations'"
         placeholder="ai-conversation"
         value={settings.defaultConversationTag}
-        onChange={(value) => updateSetting("defaultConversationTag", value)}
+        onChange={(e) => updateSetting("defaultConversationTag", e.target.value)}
       />
       <ToggleComponent
         name="Autosave Chat"
@@ -123,7 +146,7 @@ const GeneralSettings: React.FC = () => {
         description="The default folder name where custom prompts will be saved. Default is 'copilot-custom-prompts'"
         placeholder="copilot-custom-prompts"
         value={settings.customPromptsFolder}
-        onChange={(value) => updateSetting("customPromptsFolder", value)}
+        onChange={(e) => updateSetting("customPromptsFolder", e.target.value)}
       />
       <h6>
         Please be mindful of the number of tokens and context conversation turns you set here, as

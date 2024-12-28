@@ -33,6 +33,7 @@ export enum ChatModels {
   GEMINI_PRO = "gemini-1.5-pro",
   GEMINI_FLASH = "gemini-1.5-flash",
   AZURE_OPENAI = "azure-openai",
+  o1_preview = "o1-preview", // Added o1-preview
   CLAUDE_3_5_SONNET = "claude-3-5-sonnet-latest",
   CLAUDE_3_5_HAIKU = "claude-3-5-haiku-latest",
   COMMAND_R = "command-r",
@@ -115,6 +116,12 @@ export const BUILTIN_CHAT_MODELS: CustomModel[] = [
     name: ChatModels.AZURE_OPENAI,
     provider: ChatModelProviders.AZURE_OPENAI,
     enabled: true,
+    isBuiltIn: true,
+  },
+  {
+    name: ChatModels.o1_preview,
+    provider: ChatModelProviders.AZURE_OPENAI,
+    enabled: false,
     isBuiltIn: true,
   },
 ];

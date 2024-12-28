@@ -17,6 +17,10 @@ export const isFolderMatch = (fileFullpath: string, inputPath: string): boolean 
   return fileSegments.includes(inputPath.toLowerCase());
 };
 
+export const generateModelKey = (name: string, provider: string): string => {
+  return `${name}|${provider}`;
+};
+
 export async function getNoteFileFromTitle(vault: Vault, noteTitle: string): Promise<TFile | null> {
   // Get all markdown files in the vault
   const files = vault.getMarkdownFiles();

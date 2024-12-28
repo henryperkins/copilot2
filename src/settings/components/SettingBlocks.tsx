@@ -18,7 +18,9 @@ type TextComponentProps = {
   placeholder: string;
   value: string;
   type?: string;
-  onChange: (value: string) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  className?: string;
 };
 
 type TextAreaComponentProps = {
@@ -81,6 +83,8 @@ const TextComponent: React.FC<TextComponentProps> = ({
   value,
   type,
   onChange,
+  onBlur,
+  className,
 }) => {
   return (
     <div className="copilot-setting-item">
@@ -88,10 +92,11 @@ const TextComponent: React.FC<TextComponentProps> = ({
       <div className="copilot-setting-item-description">{description}</div>
       <input
         type={type || "text"}
-        className="copilot-setting-item-control"
+        className={`copilot-setting-item-control ${className || ""}`}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
+        onBlur={onBlur}
       />
     </div>
   );
@@ -444,8 +449,8 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
               description={`The name of the model, i.e. ${isEmbeddingModel ? "text-embedding-3-small" : "gpt-4o-mini"}`}
               value={newModel.name}
               placeholder="Enter model name"
-              onChange={(value) => {
-                setNewModel({ ...newModel, name: value });
+              onChange={(e) => {
+                setNewModel({ ...newModel, name: e.target.value });
               }}
             />
             <DropdownComponent
@@ -461,7 +466,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
               description="For 3rd party OpenAI Format endpoints only. Leave blank for other providers."
               value={newModel.baseUrl || ""}
               placeholder="https://api.example.com/v1"
-              onChange={(value) => setNewModel({ ...newModel, baseUrl: value })}
+              onChange={(e) => setNewModel({ ...newModel, baseUrl: e.target.value })}
             />
             <TextComponent
               name="API Key (optional)"
@@ -469,7 +474,7 @@ const ModelSettingsComponent: React.FC<ModelSettingsComponentProps> = ({
               value={newModel.apiKey || ""}
               placeholder="Enter API key"
               type="password"
-              onChange={(value) => setNewModel({ ...newModel, apiKey: value })}
+              onChange={(e) => setNewModel({ ...newModel, apiKey: e.target.value })}
             />
             <div style={{ marginTop: "20px" }}>
               <div
